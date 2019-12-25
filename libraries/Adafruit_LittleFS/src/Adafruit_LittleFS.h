@@ -87,7 +87,6 @@ class Adafruit_LittleFS
     // change to serialize access via a mutex, at least in part
     // because the VERIFY_LFS() macro includes a return statement,
     // which would otherwise exit the functions without releasing the mutex.
-    bool xWrap_begin(struct lfs_config * cfg = NULL);
     void xWrap_end(void);
     Adafruit_LittleFS_Namespace::File xWrap_open (char const *filename, uint8_t mode = Adafruit_LittleFS_Namespace::FILE_O_READ);
     bool xWrap_exists (char const *filepath);
@@ -103,7 +102,7 @@ class Adafruit_LittleFS
   #define PRINT_LFS_ERR(_err)
 #else
   #define VERIFY_LFS(...)       _GET_3RD_ARG(__VA_ARGS__, VERIFY_ERR_2ARGS, VERIFY_ERR_1ARGS)(__VA_ARGS__, dbg_strerr_lfs)
-  #define PRINT_LFS_ERR(_err)   VERIFY_MESS((long int)_err, dbg_strerr_lfs) // LFS_ERR are of type int, VERIFY_MESS expects long_int
+  #define PRINT_LFS_ERR(_err)   if (_err) VERIFY_MESS((long int)_err, dbg_strerr_lfs) // LFS_ERR are of type int, VERIFY_MESS expects long_int
 
   const char* dbg_strerr_lfs (int32_t err);
 #endif

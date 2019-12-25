@@ -57,23 +57,21 @@ Adafruit_LittleFS::~Adafruit_LittleFS ()
 // User should format the disk and try again
 bool Adafruit_LittleFS::begin (struct lfs_config * cfg)
 {
-  while (pdTRUE != xSemaphoreTake(_mutex,  portMAX_DELAY)) {}
-  bool retval = this->xWrap_begin(cfg);
-  xSemaphoreGive(_mutex);
-  return retval;
-}
-
-bool Adafruit_LittleFS::xWrap_begin (struct lfs_config * cfg)
-{
   if ( _mounted ) return true;
 
   if (cfg) _lfs_cfg = cfg;
   if (!_lfs_cfg) return false;
 
-  VERIFY_LFS(lfs_mount(&_lfs, _lfs_cfg), false);
-  _mounted = true;
+  xSemaphoreTake(_mutex,  portMAX_DELAY);
 
-  return true;
+  int err = lfs_mount(&_lfs, _lfs_cfg);
+
+  xSemaphoreGive(_mutex);
+
+  PRINT_LFS_ERR(err);
+  _mounted = (err == LFS_ERR_OK);
+
+  return _mounted;
 }
 
 // Tear down and unmount file system
@@ -207,7 +205,7 @@ bool Adafruit_LittleFS::rmdir (char const *filepath)
 
 bool Adafruit_LittleFS::xWrap_rmdir (char const *filepath)
 {
-  VERIFY_LFS(lfs_remove(&_lfs, filepath));
+  VERIFY_LFS(lfs_remove(&_lfs, filepath), false);
   return true;
 }
 
@@ -225,7 +223,7 @@ bool Adafruit_LittleFS::xWrap_rmdir_r (char const *filepath)
   /* adafruit: lfs is modified to remove non-empty folder,
    According to below issue, comment these 2 line won't corrupt filesystem
    https://github.com/ARMmbed/littlefs/issues/43 */
-  VERIFY_LFS(lfs_remove(&_lfs, filepath));
+  VERIFY_LFS(lfs_remove(&_lfs, filepath), false);
   return true;
 }
 
