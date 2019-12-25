@@ -63,31 +63,27 @@ bool Adafruit_LittleFS::begin (struct lfs_config * cfg)
   if (!_lfs_cfg) return false;
 
   xSemaphoreTake(_mutex,  portMAX_DELAY);
-
   int err = lfs_mount(&_lfs, _lfs_cfg);
-
   xSemaphoreGive(_mutex);
 
   PRINT_LFS_ERR(err);
   _mounted = (err == LFS_ERR_OK);
-
   return _mounted;
 }
 
 // Tear down and unmount file system
 void Adafruit_LittleFS::end(void)
 {
-  while (pdTRUE != xSemaphoreTake(_mutex,  portMAX_DELAY)) {}
-  this->xWrap_end();
-  xSemaphoreGive(_mutex);
-}
-
-void Adafruit_LittleFS::xWrap_end(void)
-{
   if (!_mounted) return;
 
   _mounted = false;
-  VERIFY_LFS(lfs_unmount(&_lfs), );
+
+  xSemaphoreTake(_mutex,  portMAX_DELAY);
+  int err = lfs_unmount(&_lfs);
+  xSemaphoreGive(_mutex);
+
+  PRINT_LFS_ERR(err);
+  (void) err;
 }
 
 bool Adafruit_LittleFS::format (void)
@@ -100,12 +96,16 @@ bool Adafruit_LittleFS::format (void)
 
 bool Adafruit_LittleFS::xWrap_format (void)
 {
-  // if already mounted: umount -> format -> remount
+  xSemaphoreTake(_mutex,  portMAX_DELAY);
+
+  // if already mounted: umount first -> format -> remount
   if(_mounted) VERIFY_LFS(lfs_unmount(&_lfs), false);
 
   VERIFY_LFS(lfs_format(&_lfs, _lfs_cfg), false);
 
   if (_mounted) VERIFY_LFS(lfs_mount(&_lfs, _lfs_cfg), false);
+
+  xSemaphoreGive(_mutex);
 
   return true;
 }
@@ -113,30 +113,24 @@ bool Adafruit_LittleFS::xWrap_format (void)
 // Open a file or folder
 Adafruit_LittleFS_Namespace::File Adafruit_LittleFS::open (char const *filepath, uint8_t mode)
 {
-  while (pdTRUE != xSemaphoreTake(_mutex,  portMAX_DELAY)) {}
-  Adafruit_LittleFS_Namespace::File retval = this->xWrap_open(filepath, mode);
+  xSemaphoreTake(_mutex,  portMAX_DELAY);
+  Adafruit_LittleFS_Namespace::File file(filepath, mode, *this);
   xSemaphoreGive(_mutex);
-  return retval;
-}
 
-Adafruit_LittleFS_Namespace::File Adafruit_LittleFS::xWrap_open (char const *filepath, uint8_t mode)
-{
-  return Adafruit_LittleFS_Namespace::File(filepath, mode, *this);
+  return file;
 }
 
 // Check if file or folder exists
 bool Adafruit_LittleFS::exists (char const *filepath)
 {
-  while (pdTRUE != xSemaphoreTake(_mutex,  portMAX_DELAY)) {}
-  bool retval = this->xWrap_exists(filepath);
-  xSemaphoreGive(_mutex);
-  return retval;
-}
-
-bool Adafruit_LittleFS::xWrap_exists (char const *filepath)
-{
   struct lfs_info info;
-  return 0 == lfs_stat(&_lfs, filepath, &info);
+
+  xSemaphoreTake(_mutex,  portMAX_DELAY);
+  int err = lfs_stat(&_lfs, filepath, &info);
+  xSemaphoreGive(_mutex);
+
+  PRINT_LFS_ERR(err);
+  return err == LFS_ERR_OK;
 }
 
 // Create a directory, create intermediate parent if needed
@@ -182,49 +176,37 @@ bool Adafruit_LittleFS::xWrap_mkdir (char const *filepath)
 // Remove a file
 bool Adafruit_LittleFS::remove (char const *filepath)
 {
-  while (pdTRUE != xSemaphoreTake(_mutex,  portMAX_DELAY)) {}
-  bool retval = this->xWrap_remove(filepath);
+  xSemaphoreTake(_mutex,  portMAX_DELAY);
+  int err = lfs_remove(&_lfs, filepath);
   xSemaphoreGive(_mutex);
-  return retval;
-}
 
-bool Adafruit_LittleFS::xWrap_remove (char const *filepath)
-{
-  VERIFY_LFS(lfs_remove(&_lfs, filepath), false);
-  return true;
+  PRINT_LFS_ERR(err);
+  return err == LFS_ERR_OK;
 }
 
 // Remove a folder
 bool Adafruit_LittleFS::rmdir (char const *filepath)
 {
-  while (pdTRUE != xSemaphoreTake(_mutex,  portMAX_DELAY)) {}
-  bool retval = this->xWrap_rmdir(filepath);
+  xSemaphoreTake(_mutex,  portMAX_DELAY);
+  int err = lfs_remove(&_lfs, filepath);
   xSemaphoreGive(_mutex);
-  return retval;
-}
 
-bool Adafruit_LittleFS::xWrap_rmdir (char const *filepath)
-{
-  VERIFY_LFS(lfs_remove(&_lfs, filepath), false);
-  return true;
+  PRINT_LFS_ERR(err);
+  return err == LFS_ERR_OK;
 }
 
 // Remove a folder recursively
 bool Adafruit_LittleFS::rmdir_r (char const *filepath)
 {
-  while (pdTRUE != xSemaphoreTake(_mutex,  portMAX_DELAY)) {}
-  bool retval = this->xWrap_rmdir_r(filepath);
-  xSemaphoreGive(_mutex);
-  return retval;
-}
-
-bool Adafruit_LittleFS::xWrap_rmdir_r (char const *filepath)
-{
   /* adafruit: lfs is modified to remove non-empty folder,
    According to below issue, comment these 2 line won't corrupt filesystem
    https://github.com/ARMmbed/littlefs/issues/43 */
-  VERIFY_LFS(lfs_remove(&_lfs, filepath), false);
-  return true;
+  xSemaphoreTake(_mutex,  portMAX_DELAY);
+  int err = lfs_remove(&_lfs, filepath);
+  xSemaphoreGive(_mutex);
+
+  PRINT_LFS_ERR(err);
+  return err == LFS_ERR_OK;
 }
 
 //------------- Debug -------------//
