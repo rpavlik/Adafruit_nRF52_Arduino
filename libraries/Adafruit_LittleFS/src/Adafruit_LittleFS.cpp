@@ -44,7 +44,7 @@ Adafruit_LittleFS::Adafruit_LittleFS (struct lfs_config* cfg)
   varclr(&_lfs);
   _lfs_cfg = cfg;
   _mounted = false;
-  _mutex = xSemaphoreCreateMutexStatic(&this->xMutexStorageSpace);
+  _mutex = xSemaphoreCreateMutexStatic(&this->_MutexStorageSpace);
 }
 
 Adafruit_LittleFS::~Adafruit_LittleFS ()
@@ -86,28 +86,35 @@ void Adafruit_LittleFS::end(void)
   (void) err;
 }
 
+// format file system, unmount and remount if currently mounted
 bool Adafruit_LittleFS::format (void)
-{
-  while (pdTRUE != xSemaphoreTake(_mutex,  portMAX_DELAY)) {}
-  bool retval = this->xWrap_format();
-  xSemaphoreGive(_mutex);
-  return retval;
-}
-
-bool Adafruit_LittleFS::xWrap_format (void)
 {
   xSemaphoreTake(_mutex,  portMAX_DELAY);
 
-  // if already mounted: umount first -> format -> remount
-  if(_mounted) VERIFY_LFS(lfs_unmount(&_lfs), false);
+  int err = LFS_ERR_OK;
 
-  VERIFY_LFS(lfs_format(&_lfs, _lfs_cfg), false);
+  // not a loop, just an quick way to short-circuit on error
+  do
+  {
+    // if already mounted: umount first -> format -> remount
+    if (_mounted)
+    {
+      if ( LFS_ERR_OK != (err = lfs_unmount(&_lfs)) ) break;
+    }
 
-  if (_mounted) VERIFY_LFS(lfs_mount(&_lfs, _lfs_cfg), false);
+    if ( LFS_ERR_OK != (err = lfs_format(&_lfs, _lfs_cfg)) ) break;
+
+    if (_mounted)
+    {
+      if ( LFS_ERR_OK != (err = lfs_mount(&_lfs, _lfs_cfg)) ) break;
+    }
+
+  } while(0);
 
   xSemaphoreGive(_mutex);
 
-  return true;
+  PRINT_LFS_ERR(err);
+  return err == LFS_ERR_OK;
 }
 
 // Open a file or folder

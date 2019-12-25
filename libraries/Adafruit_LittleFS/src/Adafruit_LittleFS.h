@@ -81,13 +81,7 @@ class Adafruit_LittleFS
     SemaphoreHandle_t _mutex;
 
   private:
-    StaticSemaphore_t xMutexStorageSpace;
-
-    // these wrapped functions are needed to simplify
-    // change to serialize access via a mutex, at least in part
-    // because the VERIFY_LFS() macro includes a return statement,
-    // which would otherwise exit the functions without releasing the mutex.
-    bool xWrap_format (void);
+    StaticSemaphore_t _MutexStorageSpace;
 };
 
 #if !CFG_DEBUG
