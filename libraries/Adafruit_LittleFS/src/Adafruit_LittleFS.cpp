@@ -136,41 +136,44 @@ bool Adafruit_LittleFS::exists (char const *filepath)
 // Create a directory, create intermediate parent if needed
 bool Adafruit_LittleFS::mkdir (char const *filepath)
 {
-  while (pdTRUE != xSemaphoreTake(_mutex,  portMAX_DELAY)) {}
-  bool retval = this->xWrap_mkdir(filepath);
-  xSemaphoreGive(_mutex);
-  return retval;
-}
+  bool ret = true;
 
-bool Adafruit_LittleFS::xWrap_mkdir (char const *filepath)
-{
   const char* slash = filepath;
   if ( slash[0] == '/' ) slash++;    // skip root '/'
+
+  xSemaphoreTake(_mutex,  portMAX_DELAY);
 
   while ( NULL != (slash = strchr(slash, '/')) )
   {
     char parent[slash - filepath + 1] = { 0 };
     memcpy(parent, filepath, slash - filepath);
 
-    // make intermediate parent
+    // make intermediate parent if not existed
     int rc = lfs_mkdir(&_lfs, parent);
     if ( rc != LFS_ERR_OK && rc != LFS_ERR_EXIST )
     {
+      // exit if failed to create parent
       PRINT_LFS_ERR(rc);
-      return false;
+      ret = false;
+      break;
     }
 
     slash++;
   }
   
-  int rc = lfs_mkdir(&_lfs, filepath);
-  if ( rc != LFS_ERR_OK && rc != LFS_ERR_EXIST )
+  if (ret)
   {
-    PRINT_LFS_ERR(rc);
-    return false;
+    int rc = lfs_mkdir(&_lfs, filepath);
+    if ( rc != LFS_ERR_OK && rc != LFS_ERR_EXIST )
+    {
+      PRINT_LFS_ERR(rc);
+      ret = false;
+    }
   }
 
-  return true;
+  xSemaphoreGive(_mutex);
+
+  return ret;
 }
 
 // Remove a file

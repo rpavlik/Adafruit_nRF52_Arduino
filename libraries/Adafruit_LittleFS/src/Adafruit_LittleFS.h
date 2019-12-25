@@ -87,7 +87,6 @@ class Adafruit_LittleFS
     // change to serialize access via a mutex, at least in part
     // because the VERIFY_LFS() macro includes a return statement,
     // which would otherwise exit the functions without releasing the mutex.
-    bool xWrap_mkdir (char const *filepath);
     bool xWrap_format (void);
 };
 
