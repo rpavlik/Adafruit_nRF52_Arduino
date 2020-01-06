@@ -360,11 +360,10 @@ File File::openNextFile (uint8_t mode)
 
 void File::rewindDirectory (void)
 {
+  VERIFY(_is_dir, );
   _fs->_lockFS();
-  if (this->_is_dir)
-  {
-    lfs_dir_rewind(_fs->_getFS(), _dir);
-  }
+
+  lfs_dir_rewind(_fs->_getFS(), _dir);
+
   _fs->_unlockFS();
-  return;
 }
