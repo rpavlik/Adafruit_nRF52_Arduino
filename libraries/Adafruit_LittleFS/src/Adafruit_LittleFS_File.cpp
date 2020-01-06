@@ -325,19 +325,12 @@ bool File::isOpen(void)
 //            suddenly (unexpectedly?) have different values.
 char const* File::name (void)
 {
-  this->DoNotCallFromOutsideClass_LockFilesystem();
-  char const* ret = this->_name;
-  this->DoNotCallFromOutsideClass_UnlockFilesystem();
-  return ret;
+  return this->_name;
 }
 
 bool File::isDirectory (void)
 {
-  this->DoNotCallFromOutsideClass_LockFilesystem();
-  bool ret = this->_is_dir;
-  this->DoNotCallFromOutsideClass_UnlockFilesystem();
-  return ret;
-
+  return this->_is_dir;
 }
 
 File File::openNextFile (uint8_t mode)
