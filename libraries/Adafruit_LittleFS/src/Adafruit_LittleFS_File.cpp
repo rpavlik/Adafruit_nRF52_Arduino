@@ -197,80 +197,73 @@ int File::read (void *buf, uint16_t nbyte)
 
 int File::peek (void)
 {
-  int ret = -1;
+  VERIFY(!_is_dir, -1);
   this->DoNotCallFromOutsideClass_LockFilesystem();
-  if (!this->_is_dir)
+
+  int ret = -1;
+  uint32_t pos = lfs_file_tell(_fs->getFS(), _file);
+  uint8_t ch = 0;
+  if (lfs_file_read(_fs->getFS(), _file, &ch, 1) > 0)
   {
-    uint32_t pos = lfs_file_tell(_fs->getFS(), _file);
-    uint8_t ch = 0;
-    if (lfs_file_read(_fs->getFS(), _file, &ch, 1) > 0)
-    {
-      ret = static_cast<int>(ch);
-    }
-    (void)lfs_file_seek(_fs->getFS(), _file, pos, LFS_SEEK_SET);
+    ret = static_cast<int>(ch);
   }
+  (void)lfs_file_seek(_fs->getFS(), _file, pos, LFS_SEEK_SET);
+
   this->DoNotCallFromOutsideClass_UnlockFilesystem();
   return ret;
 }
 
 int File::available (void)
 {
-  int ret = 0;
+  VERIFY(!_is_dir, 0);
   this->DoNotCallFromOutsideClass_LockFilesystem();
-  if (!this->_is_dir)
-  {
-    uint32_t size = lfs_file_size(_fs->getFS(), _file);
-    uint32_t pos  = lfs_file_tell(_fs->getFS(), _file);
-    ret = size - pos;
-  }
+
+  int ret = lfs_file_size(_fs->getFS(), _file) - lfs_file_tell(_fs->getFS(), _file);
+
   this->DoNotCallFromOutsideClass_UnlockFilesystem();
   return ret;
 }
 
 bool File::seek (uint32_t pos)
 {
-  bool ret = false;
+  VERIFY(!_is_dir, false);
   this->DoNotCallFromOutsideClass_LockFilesystem();
-  if (!this->_is_dir)
-  {
-    ret = lfs_file_seek(_fs->getFS(), _file, pos, LFS_SEEK_SET) >= 0;
-  }
+
+  bool ret = lfs_file_seek(_fs->getFS(), _file, pos, LFS_SEEK_SET) >= 0;
+
   this->DoNotCallFromOutsideClass_UnlockFilesystem();
   return ret;
 }
 
 uint32_t File::position (void)
 {
-  uint32_t ret = 0;
+  VERIFY(!_is_dir, 0);
   this->DoNotCallFromOutsideClass_LockFilesystem();
-  if (!this->_is_dir)
-  {
-    ret = lfs_file_tell(_fs->getFS(), _file);
-  }
+
+  uint32_t ret = lfs_file_tell(_fs->getFS(), _file);
+
   this->DoNotCallFromOutsideClass_UnlockFilesystem();
   return ret;
 }
 
 uint32_t File::size (void)
 {
-  uint32_t ret = 0;
+  VERIFY(!_is_dir, 0);
   this->DoNotCallFromOutsideClass_LockFilesystem();
-  if (!this->_is_dir)
-  {
-    ret = lfs_file_size(_fs->getFS(), _file);
-  }
+
+  uint32_t ret = lfs_file_size(_fs->getFS(), _file);
+
   this->DoNotCallFromOutsideClass_UnlockFilesystem();
   return ret;
-
 }
 
 void File::flush (void)
 {
+  VERIFY(!_is_dir, );
   this->DoNotCallFromOutsideClass_LockFilesystem();
-  if (!this->_is_dir)
-  {
-    lfs_file_sync(_fs->getFS(), _file);
-  }
+
+  lfs_file_sync(_fs->getFS(), _file);
+
   this->DoNotCallFromOutsideClass_UnlockFilesystem();
   return;
 }
@@ -281,6 +274,7 @@ void File::close (void)
   this->_close();
   this->DoNotCallFromOutsideClass_UnlockFilesystem();
 }
+
 void File::_close(void)
 {
   if ( this->isOpen() )
@@ -379,6 +373,7 @@ void File::DoNotCallFromOutsideClass_LockFilesystem(void)
 {
   xSemaphoreTake(this->_fs->_mutex,  portMAX_DELAY);
 }
+
 void File::DoNotCallFromOutsideClass_UnlockFilesystem(void)
 {
   xSemaphoreGive(this->_fs->_mutex);
