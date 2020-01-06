@@ -58,8 +58,6 @@ File::File (uint8_t differentiator, char const *filename, uint8_t mode, Adafruit
   this->_open(filename, mode);
 }
 
-
-
 bool File::_open_file (char const *filepath, uint8_t mode)
 {
   int flags = (mode == FILE_O_READ) ? LFS_O_RDONLY :
@@ -121,6 +119,7 @@ bool File::open (char const *filepath, uint8_t mode)
   this->DoNotCallFromOutsideClass_UnlockFilesystem();
   return ret;
 }
+
 bool File::_open (char const *filepath, uint8_t mode)
 {
   bool ret = false;
@@ -162,17 +161,14 @@ size_t File::write (uint8_t ch)
 
 size_t File::write (uint8_t const *buf, size_t size)
 {
-  lfs_ssize_t wrcount = 0;
+  VERIFY(!_is_dir, 0);
   this->DoNotCallFromOutsideClass_LockFilesystem();
-  if (!this->_is_dir)
-  {
-    wrcount = lfs_file_write(_fs->getFS(), _file, buf, size);
-    if (wrcount < 0)
-    {
-      wrcount = 0;
-    };
-  }
+
+  lfs_ssize_t wrcount = lfs_file_write(_fs->getFS(), _file, buf, size);
+  if (wrcount < 0) wrcount = 0;
+
   this->DoNotCallFromOutsideClass_UnlockFilesystem();
+
   return wrcount;
 }
 
@@ -190,12 +186,11 @@ int File::read (void)
 
 int File::read (void *buf, uint16_t nbyte)
 {
-  int ret = 0;
+  VERIFY(!_is_dir, -1);
   this->DoNotCallFromOutsideClass_LockFilesystem();
-  if (!this->_is_dir)
-  {
-    ret = lfs_file_read(_fs->getFS(), _file, buf, nbyte);
-  }
+
+  int ret = lfs_file_read(_fs->getFS(), _file, buf, nbyte);
+
   this->DoNotCallFromOutsideClass_UnlockFilesystem();
   return ret;
 }
