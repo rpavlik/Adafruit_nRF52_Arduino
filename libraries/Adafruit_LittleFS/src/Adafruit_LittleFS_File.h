@@ -76,9 +76,7 @@ class File : public Stream
 
     void close (void);
 
-    __attribute__((deprecated("Recommend use of isOpen() for clarity")))
     operator bool (void);
-
     bool isOpen(void);
     char const* name (void);
 

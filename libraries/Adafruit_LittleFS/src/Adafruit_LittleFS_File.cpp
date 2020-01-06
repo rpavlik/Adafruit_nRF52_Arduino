@@ -126,7 +126,7 @@ bool File::_open (char const *filepath, uint8_t mode)
   bool ret = false;
 
   // close if currently opened
-  if ( this->_isOpen() ) _close();
+  if ( this->isOpen() ) _close();
 
   struct lfs_info info;
   int rc = lfs_stat(_fs->getFS(), filepath, &info);
@@ -288,7 +288,7 @@ void File::close (void)
 }
 void File::_close(void)
 {
-  if ( this->_isOpen() )
+  if ( this->isOpen() )
   {
     if ( this->_is_dir )
     {
@@ -308,24 +308,12 @@ void File::_close(void)
   }
 }
 
-[[deprecated("Recommend use of isOpen() for clarity")]]
 File::operator bool (void)
 {
-  bool ret = false;
-  this->DoNotCallFromOutsideClass_LockFilesystem();
-  ret = this->_isOpen();
-  this->DoNotCallFromOutsideClass_UnlockFilesystem();
-  return ret;
+  return (_file != NULL) || (_dir != NULL);
 }
+
 bool File::isOpen(void)
-{
-  bool ret = 0;
-  this->DoNotCallFromOutsideClass_LockFilesystem();
-  ret = this->_isOpen();
-  this->DoNotCallFromOutsideClass_UnlockFilesystem();
-  return ret;
-}
-bool File::_isOpen(void)
 {
   return (_file != NULL) || (_dir != NULL);
 }
